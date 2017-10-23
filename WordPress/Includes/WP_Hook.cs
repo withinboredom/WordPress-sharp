@@ -61,7 +61,7 @@ namespace WordPress.Includes
 
         public override int GetHashCode()
         {
-            return (Callback != null ? Callback.GetHashCode() : 0);
+            return Callback != null ? Callback.GetHashCode() : 0;
         }
 
         public bool Equals(HookCallback other)
@@ -97,9 +97,7 @@ namespace WordPress.Includes
         public void AddFilter(string tag, Func<IEnumerable, Task<object>> callback, int priority, int acceptedArgs)
         {
             if (!Callbacks.ContainsKey(priority))
-            {
                 Callbacks[priority] = new List<HookCallback>();
-            }
 
             Callbacks[priority].Add(new HookCallback(callback, acceptedArgs));
         }
@@ -107,9 +105,7 @@ namespace WordPress.Includes
         public bool RemoveFilter(string tag, Func<IEnumerable, Task<object>> callback, int priority)
         {
             if (!Callbacks.ContainsKey(priority))
-            {
                 return false;
-            }
 
             return Callbacks[priority].Contains(callback) && Callbacks[priority].Remove(callback);
         }
@@ -151,9 +147,7 @@ namespace WordPress.Includes
         public async Task<object> ApplyFilters(object value, IEnumerable args)
         {
             if (!Callbacks.Any(e => e.Value.Count > 0))
-            {
                 return value;
-            }
 
             var nest = _nestingLevel++;
             var iterator = Iterations[nest] = new HookIteration(Callbacks.Keys);
@@ -165,7 +159,9 @@ namespace WordPress.Includes
 
                 if (!Callbacks.ContainsKey(priority)) continue;
 
-                foreach (var callback in Callbacks[priority])
+                var callbacks = Callbacks[priority].ToArray();
+
+                foreach (var callback in callbacks)
                 {
                     Array newArgs;
                     if (!_isAction)
@@ -173,9 +169,7 @@ namespace WordPress.Includes
                         newArgs = new object[numArgs + 1];
                         newArgs.SetValue(value, 0);
                         if (numArgs > 0)
-                        {
-                            newArgs.CopyTo(newArgs, 1);
-                        }
+                            ((Array)args).CopyTo(newArgs, 1);
                     }
                     else
                     {
@@ -201,9 +195,7 @@ namespace WordPress.Includes
             await ApplyFilters("", args);
 
             if (_nestingLevel == 0)
-            {
                 _isAction = false;
-            }
         }
 
         public Task DoAction()
@@ -220,9 +212,7 @@ namespace WordPress.Includes
             {
                 var priority = iterator.Current;
                 foreach (var the_ in Callbacks[priority])
-                {
                     await the_.Callback(args);
-                }
             }
 
             iterator.Dispose();
@@ -233,9 +223,7 @@ namespace WordPress.Includes
         public int? CurrentPriority()
         {
             if (!Iterations.Any())
-            {
                 return null;
-            }
 
             return CurrentPriorityDictionary[_nestingLevel - 1];
         }
