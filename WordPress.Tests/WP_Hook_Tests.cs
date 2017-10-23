@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using WordPress.Includes;
 using Xunit;
@@ -25,7 +26,7 @@ namespace WordPress.Tests
         public async void TestSimpleHook()
         {
             var hook = new WpHook();
-            hook.AddFilter("test", IdentityCallback, 10, 0);
+            hook.AddFilter("test", IdentityCallback, 10, 1);
             Assert.True(hook.HasFilters());
             var priority = hook.HasFilter("test", IdentityCallback);
             Assert.True(priority.HasValue);
@@ -38,10 +39,10 @@ namespace WordPress.Tests
         public async void Sum()
         {
             var hook = new WpHook();
-            hook.AddFilter("", SumCallback, 10, 0);
-            hook.AddFilter("", SumCallback, 15, 0);
+            hook.AddFilter("", SumCallback, 10, 1);
+            hook.AddFilter("", SumCallback, 15, 1);
             Assert.Equal(2, (int)await hook.ApplyFilters(0));
-            hook.AddFilter("", FalseCallback, 20, 0);
+            hook.AddFilter("", FalseCallback, 20, 1);
             Assert.False((bool)await hook.ApplyFilters(0));
         }
 
@@ -49,8 +50,8 @@ namespace WordPress.Tests
         public async void Nesting()
         {
             var hook = new WpHook();
-            hook.AddFilter("", SumCallback, 10, 0);
-            hook.AddFilter("", Nest(hook), 10, 0);
+            hook.AddFilter("", SumCallback, 10, 1);
+            hook.AddFilter("", Nest(hook), 10, 1);
             var result = await hook.ApplyFilters(0);
             Assert.Equal(2, result);
         }
@@ -82,33 +83,33 @@ namespace WordPress.Tests
             await hook.DoAction();
         }
 
-        private Func<IEnumerable, Task<object>> Nest(WpHook hook)
+        private Func<IEnumerable<object>, Task<object>> Nest(WpHook hook)
         {
             return async a =>
             {
-                var ar = (Array)a;
-                if ((int)ar.GetValue(0) < 2)
+                var ar = (List<object>)a;
+                if ((int)ar[0] < 2)
                 {
-                    return await hook.ApplyFilters(ar.GetValue(0));
+                    return await hook.ApplyFilters(ar[0]);
                 }
 
-                return ar.GetValue(0);
+                return ar[0];
             };
         }
 
-        private async Task<object> IdentityCallback(IEnumerable array)
+        private async Task<object> IdentityCallback(IEnumerable<object> array)
         {
-            return ((Array)array).GetValue(0);
+            return array.FirstOrDefault();
         }
 
-        private async Task<object> FalseCallback(IEnumerable array)
+        private async Task<object> FalseCallback(IEnumerable<object> array)
         {
             return false;
         }
 
-        private async Task<object> SumCallback(IEnumerable array)
+        private async Task<object> SumCallback(IEnumerable<object> array)
         {
-            return (int)((Array)array).GetValue(0) + 1;
+            return (int)array.FirstOrDefault() + 1;
         }
     }
 }

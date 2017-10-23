@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using WordPress.Includes;
@@ -35,18 +36,18 @@ namespace WordPress.Tests
         {
             var didAction = false;
             var manager = new WpHookManager();
-            Func<IEnumerable, Task<object>> action = async (act) =>
+            Func<IEnumerable<object>, Task<object>> action = async (act) =>
             {
                 Assert.Equal("testAction", manager.CurrentAction());
                 didAction = true;
                 return null;
             };
 
-            Func<IEnumerable, Task<object>> filter = async (act) =>
+            Func<IEnumerable<object>, Task<object>> filter = async (act) =>
             {
-                var ar = (Array) act;
+                var ar = (List<object>)act;
                 await manager.DoAction("testAction");
-                return (int)ar.GetValue(0) + 1;
+                return (int)ar[0] + 1;
             };
 
             manager.AddAction("testAction", action);
@@ -55,9 +56,9 @@ namespace WordPress.Tests
             Assert.Equal(2, result);
         }
 
-        private async Task<object> IdentityCallback(IEnumerable array)
+        private async Task<object> IdentityCallback(IEnumerable<object> array)
         {
-            return ((Array)array).GetValue(0);
+            return array.FirstOrDefault();
         }
     }
 }

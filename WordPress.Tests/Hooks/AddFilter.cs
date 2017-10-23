@@ -104,8 +104,8 @@ namespace WordPress.Tests.Hooks
             var tag = "remove_and_add";
 
             hook.AddFilter(tag, Mocks.ReturnEmptyString, 10, 0 );
-            hook.AddFilter(tag, Mocks.RemoveAndAdd2, 11, 1);
-            hook.AddFilter(tag, Mocks.AddString(4), 12, 1);
+            hook.AddFilter(tag, Mocks.RemoveAndAdd2, 11, 2);
+            hook.AddFilter(tag, Mocks.AddString(4), 12, 2);
 
             var value = await hook.ApplyFilters("", new object[] { hook });
 

@@ -22,7 +22,7 @@ namespace WordPress.Includes
             Actions = new Dictionary<string, int>();
         }
 
-        public bool AddFilter(string tag, Func<IEnumerable, Task<object>> callback, int priority = 10,
+        public bool AddFilter(string tag, Func<IEnumerable<object>, Task<object>> callback, int priority = 10,
             int acceptedArgs = 1)
         {
             if (!Hooks.ContainsKey(tag))
@@ -34,7 +34,7 @@ namespace WordPress.Includes
             return true;
         }
 
-        public int? HasFilter(string tag, Func<IEnumerable, Task<object>> callback)
+        public int? HasFilter(string tag, Func<IEnumerable<object>, Task<object>> callback)
         {
             if (callback != null) return !Hooks.ContainsKey(tag) ? null : Hooks[tag].HasFilter(tag, callback);
 
@@ -51,7 +51,7 @@ namespace WordPress.Includes
             return Hooks.ContainsKey(tag) && Hooks[tag].HasFilter(tag);
         }
 
-        private async Task CallAllHook(IEnumerable args)
+        private async Task CallAllHook(IEnumerable<object> args)
         {
             await Hooks["all"].DoAllHook(args);
         }
@@ -89,7 +89,7 @@ namespace WordPress.Includes
             return ReallyApplyFilters(tag, value, args);
         }
 
-        public bool RemoveFilter(string tag, Func<IEnumerable, Task<object>> callback, int priority = 10)
+        public bool RemoveFilter(string tag, Func<IEnumerable<object>, Task<object>> callback, int priority = 10)
         {
             bool result;
             if (!Hooks.ContainsKey(tag)) return false;
@@ -149,7 +149,7 @@ namespace WordPress.Includes
             return DoingFilter(action);
         }
 
-        public bool AddAction(string tag, Func<IEnumerable, Task<object>> callback, int priority = 10,
+        public bool AddAction(string tag, Func<IEnumerable<object>, Task<object>> callback, int priority = 10,
             int acceptedArgs = 1)
         {
             return AddFilter(tag, callback, priority, acceptedArgs);
@@ -185,7 +185,7 @@ namespace WordPress.Includes
             return null;
         }
 
-        public int? HasAction(string tag, Func<IEnumerable, Task<object>> callback)
+        public int? HasAction(string tag, Func<IEnumerable<object>, Task<object>> callback)
         {
             return HasFilter(tag, callback);
         }
@@ -195,7 +195,7 @@ namespace WordPress.Includes
             return HasFilter(tag);
         }
 
-        public bool RemoveAction(string tag, Func<IEnumerable, Task<object>> callback, int priority = 10)
+        public bool RemoveAction(string tag, Func<IEnumerable<object>, Task<object>> callback, int priority = 10)
         {
             return RemoveFilter(tag, callback, priority);
         }

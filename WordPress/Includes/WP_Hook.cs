@@ -43,18 +43,18 @@ namespace WordPress.Includes
 
     internal sealed class HookCallback :
         IEquatable<HookCallback>,
-        IEquatable<Func<IEnumerable, Task<object>>>
+        IEquatable<Func<IEnumerable<object>, Task<object>>>
     {
-        public Func<IEnumerable, Task<object>> Callback { get; }
+        public Func<IEnumerable<object>, Task<object>> Callback { get; }
         public int AcceptedArgs { get; }
 
-        public HookCallback(Func<IEnumerable, Task<object>> callback, int acceptedArgs)
+        public HookCallback(Func<IEnumerable<object>, Task<object>> callback, int acceptedArgs)
         {
             Callback = callback;
             AcceptedArgs = acceptedArgs;
         }
 
-        public static implicit operator HookCallback(Func<IEnumerable, Task<object>> cb)
+        public static implicit operator HookCallback(Func<IEnumerable<object>, Task<object>> cb)
         {
             return new HookCallback(cb, 0);
         }
@@ -78,7 +78,7 @@ namespace WordPress.Includes
             return obj is HookCallback && Equals((HookCallback)obj);
         }
 
-        public bool Equals(Func<IEnumerable, Task<object>> other)
+        public bool Equals(Func<IEnumerable<object>, Task<object>> other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
@@ -94,7 +94,7 @@ namespace WordPress.Includes
         private int _nestingLevel = 0;
         private bool _isAction = false;
 
-        public void AddFilter(string tag, Func<IEnumerable, Task<object>> callback, int priority, int acceptedArgs)
+        public void AddFilter(string tag, Func<IEnumerable<object>, Task<object>> callback, int priority, int acceptedArgs)
         {
             if (!Callbacks.ContainsKey(priority))
                 Callbacks[priority] = new List<HookCallback>();
@@ -102,7 +102,7 @@ namespace WordPress.Includes
             Callbacks[priority].Add(new HookCallback(callback, acceptedArgs));
         }
 
-        public bool RemoveFilter(string tag, Func<IEnumerable, Task<object>> callback, int priority)
+        public bool RemoveFilter(string tag, Func<IEnumerable<object>, Task<object>> callback, int priority)
         {
             if (!Callbacks.ContainsKey(priority))
                 return false;
@@ -110,7 +110,7 @@ namespace WordPress.Includes
             return Callbacks[priority].Contains(callback) && Callbacks[priority].Remove(callback);
         }
 
-        public int? HasFilter(string tag, Func<IEnumerable, Task<object>> callback)
+        public int? HasFilter(string tag, Func<IEnumerable<object>, Task<object>> callback)
         {
             var found = from c in Callbacks
                         where c.Value.Contains(callback)
@@ -144,14 +144,14 @@ namespace WordPress.Includes
             return ApplyFilters(value, new object[0]);
         }
 
-        public async Task<object> ApplyFilters(object value, IEnumerable args)
+        public async Task<object> ApplyFilters(object value, IEnumerable<object> args)
         {
             if (!Callbacks.Any(e => e.Value.Count > 0))
                 return value;
 
             var nest = _nestingLevel++;
             var iterator = Iterations[nest] = new HookIteration(Callbacks.Keys);
-            var numArgs = ((Array)args).Length;
+            var numArgs = args.Count();
 
             while (iterator.MoveNext())
             {
@@ -163,18 +163,25 @@ namespace WordPress.Includes
 
                 foreach (var callback in callbacks)
                 {
-                    Array newArgs;
+                    var expectedArgs = callback.AcceptedArgs;
+                    var newArgs = new List<object>(expectedArgs);
                     if (!_isAction)
                     {
-                        newArgs = new object[numArgs + 1];
-                        newArgs.SetValue(value, 0);
-                        if (numArgs > 0)
-                            ((Array)args).CopyTo(newArgs, 1);
+                        if (expectedArgs > 0)
+                        {
+                            newArgs.Add(value);
+                        }
+                        if (expectedArgs > 1)
+                        {
+                            newArgs.AddRange(args.Take(expectedArgs - 1));
+                        }
                     }
                     else
                     {
-                        newArgs = new object[numArgs];
-                        ((Array)args).CopyTo(newArgs, 0);
+                        if (expectedArgs > 0)
+                        {
+                            newArgs.AddRange(args.Take(expectedArgs));
+                        }
                     }
 
                     value = await callback.Callback(newArgs);
@@ -189,7 +196,7 @@ namespace WordPress.Includes
             return value;
         }
 
-        public async Task DoAction(IEnumerable args)
+        public async Task DoAction(IEnumerable<object> args)
         {
             _isAction = true;
             await ApplyFilters("", args);
@@ -203,7 +210,7 @@ namespace WordPress.Includes
             return DoAction(new object[0]);
         }
 
-        public async Task DoAllHook(IEnumerable args)
+        public async Task DoAllHook(IEnumerable<object> args)
         {
             var nestingLevel = _nestingLevel++;
             var iterator = Iterations[nestingLevel] = new HookIteration(Callbacks.Keys);
